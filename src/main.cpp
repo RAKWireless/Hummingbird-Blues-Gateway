@@ -87,6 +87,10 @@ bool init_app(void)
 	if (!has_blues)
 	{
 		AT_PRINTF("+EVT:CELLULAR_ERROR");
+		MYLOG("APP", "Start P2P RX");
+		// Set to permanent listen
+		g_lora_p2p_rx_mode = RX_MODE_RX;
+		Radio.Rx(0);
 	}
 	else
 	{
@@ -199,16 +203,18 @@ void app_event_handler(void)
 				MYLOG("APP", "**********************************************");
 				MYLOG("APP", "Get hub sync status:");
 				// {“req”:”hub.sync.status”}
-				blues_start_req("hub.sync.status");
-				blues_send_req();
+				rak_blues.start_req((char *)"hub.sync.status");
+				rak_blues.send_req(blues_response,4096);
+				Serial.println(blues_response);
 
 				MYLOG("APP", "**********************************************");
 				delay(2000);
 
 				MYLOG("APP", "Get note card status:");
 				// {“req”:”card.wireless”}
-				blues_start_req("card.wireless");
-				blues_send_req();
+				rak_blues.start_req((char *)"card.wireless");
+				rak_blues.send_req(blues_response, 4096);
+				Serial.println(blues_response);
 
 				MYLOG("APP", "**********************************************");
 				delay(2000);

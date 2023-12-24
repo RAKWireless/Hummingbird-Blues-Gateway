@@ -17,9 +17,7 @@
 #endif
 #define myProductID PRODUCT_UID
 
-Notecard notecard;
-
-J *req;
+RAK_BLUES rak_blues;
 
 /** Buffer for serialized JSON response */
 char blues_response[4096];
@@ -27,7 +25,7 @@ char blues_response[4096];
 bool init_blues(void)
 {
 	Wire.begin();
-	notecard.begin();
+	Wire.setClock(100000);
 
 	// Get the ProductUID from the saved settings
 	// If no settings are found, use NoteCard internal settings!
@@ -41,23 +39,24 @@ bool init_blues(void)
 			memcpy(g_blues_settings.product_uid, PRODUCT_UID, 33);
 		}
 
+		// {"req": "hub.set"}
 		MYLOG("BLUES", "Set Product ID and connection mode");
-		if (blues_start_req("hub.set"))
+		if (rak_blues.start_req((char *)"hub.set"))
 		{
-			JAddStringToObject(req, "product", g_blues_settings.product_uid);
+			rak_blues.add_string_entry((char *)"product", g_blues_settings.product_uid);
 			if (g_blues_settings.conn_continous)
 			{
-				JAddStringToObject(req, "mode", "continuous");
+				rak_blues.add_string_entry((char *)"mode", "continuous");
 			}
 			else
 			{
-				JAddStringToObject(req, "mode", "minimum");
+				rak_blues.add_string_entry((char *)"mode", "minimum");
 			}
 			// Set sync time to 20 times the sensor read time
-			JAddNumberToObject(req, "seconds", (g_lorawan_settings.send_repeat_time * 20 / 1000));
-			JAddBoolToObject(req, "heartbeat", true);
+			rak_blues.add_int32_entry((char *)"seconds", (g_lorawan_settings.send_repeat_time * 20 / 1000));
+			rak_blues.add_bool_entry((char *)"heartbeat", true);
 
-			if (!blues_send_req())
+			if (!rak_blues.send_req())
 			{
 				MYLOG("BLUES", "hub.set request failed");
 				return false;
@@ -70,19 +69,20 @@ bool init_blues(void)
 		}
 
 #if USE_GNSS == 1
+		// {"req": "card.location.mode"}
 		MYLOG("BLUES", "Set location mode");
-		if (blues_start_req("card.location.mode"))
+		if (rak_blues.start_req((char *)"card.location.mode"))
 		{
 			// Continous GNSS mode
-			// JAddStringToObject(req, "mode", "continous");
+			// rak_blues.add_string_entry((char *)"mode", "continous");
 
 			// Periodic GNSS mode
-			JAddStringToObject(req, "mode", "periodic");
+			rak_blues.add_string_entry((char *)"mode", "periodic");
 
 			// Set location acquisition time to the sensor read time
-			JAddNumberToObject(req, "seconds", (g_lorawan_settings.send_repeat_time / 2000));
-			JAddBoolToObject(req, "heartbeat", true);
-			if (!blues_send_req())
+			rak_blues.add_int32_entry((char *)"seconds", (g_lorawan_settings.send_repeat_time / 2000));
+			rak_blues.add_bool_entry((char *)"heartbeat", true);
+			if (!rak_blues.send_req())
 			{
 				MYLOG("BLUES", "card.location.mode request failed");
 				return false;
@@ -94,12 +94,13 @@ bool init_blues(void)
 			return false;
 		}
 #else
+		// {"req": "card.location.mode"}
 		MYLOG("BLUES", "Stop location mode");
-		if (blues_start_req("card.location.mode"))
+		if (rak_blues.start_req((char *)"card.location.mode"))
 		{
 			// GNSS mode off
-			JAddStringToObject(req, "mode", "off");
-			if (!blues_send_req())
+			rak_blues.add_string_entry((char *)"mode", "off");
+			if (!rak_blues.send_req())
 			{
 				MYLOG("BLUES", "card.location.mode request failed");
 				return false;
@@ -112,60 +113,36 @@ bool init_blues(void)
 		}
 #endif
 
-		/// \todo reset attn signal needs rework
-		// pinMode(WB_IO5, INPUT);
-		// if (g_blues_settings.motion_trigger)
-		// {
-		// 	if (blues_start_req("card.attn"))
-		// 	{
-		// 		JAddStringToObject(req, "mode", "disarm");
-		// 		if (!blues_send_req())
-		// 		{
-		// 			MYLOG("BLUES", "card.attn request failed");
-		// 		}
-
-		// 		if (!blues_enable_attn())
-		// 		{
-		// 			return false;
-		// 		}
-		// 	}
-		// }
-		// else
-		// {
-		// 	MYLOG("BLUES", "card.attn request failed");
-		// 	return false;
-		// }
-
 		MYLOG("BLUES", "Set APN");
 		// {“req”:”card.wireless”}
-		if (blues_start_req("card.wireless"))
+		if (rak_blues.start_req((char *)"card.wireless"))
 		{
-			JAddStringToObject(req, "mode", "auto");
+			rak_blues.add_string_entry((char *)"mode", "auto");
 
 			switch (g_blues_settings.sim_usage)
 			{
 			case 0:
 				// USING BLUES eSIM CARD
-				JAddStringToObject(req, (char *)"method", (char *)"primary");
+				rak_blues.add_string_entry((char *)"method", (char *)"primary");
 				break;
 			case 1:
 				// USING EXTERNAL SIM CARD only
-				JAddStringToObject(req, (char *)"apn", g_blues_settings.ext_sim_apn);
-				JAddStringToObject(req, (char *)"method", (char *)"secondary");
+				rak_blues.add_string_entry((char *)"apn", g_blues_settings.ext_sim_apn);
+				rak_blues.add_string_entry((char *)"method", (char *)"secondary");
 				break;
 			case 2:
 				// USING EXTERNAL SIM CARD as primary
-				JAddStringToObject(req, (char *)"apn", g_blues_settings.ext_sim_apn);
-				JAddStringToObject(req, (char *)"method", (char *)"dual-secondary-primary");
+				rak_blues.add_string_entry((char *)"apn", g_blues_settings.ext_sim_apn);
+				rak_blues.add_string_entry((char *)"method", (char *)"dual-secondary-primary");
 				break;
 			case 3:
 				// USING EXTERNAL SIM CARD as secondary
-				JAddStringToObject(req, (char *)"apn", g_blues_settings.ext_sim_apn);
-				JAddStringToObject(req, (char *)"method", (char *)"dual-primary-secondary");
+				rak_blues.add_string_entry((char *)"apn", g_blues_settings.ext_sim_apn);
+				rak_blues.add_string_entry((char *)"method", (char *)"dual-primary-secondary");
 				break;
 			}
 
-			if (!blues_send_req())
+			if (!rak_blues.send_req())
 			{
 				MYLOG("BLUES", "card.wireless request failed");
 				return false;
@@ -179,16 +156,17 @@ bool init_blues(void)
 
 #if IS_V2 == 1
 		// Only for V2 cards, setup the WiFi network
+		// {"req": "card.wifi"}
 		MYLOG("BLUES", "Set WiFi");
-		if (blues_start_req("card.wifi"))
+		if (rak_blues.start_req((char *)"card.wifi"))
 		{
-			JAddStringToObject(req, "ssid", "-");
-			JAddStringToObject(req, "password", "-");
-			JAddStringToObject(req, "name", "RAK-");
-			JAddStringToObject(req, "org", "RAK-PH");
-			JAddBoolToObject(req, "start", false);
+			rak_blues.add_string_entry((char *)"ssid", "-");
+			rak_blues.add_string_entry((char *)"password", "-");
+			rak_blues.add_string_entry((char *)"name", "RAK-");
+			rak_blues.add_string_entry((char *)"org", "RAK-PH");
+			rak_blues.add_bool_entry((char *)"start", false);
 
-			if (!blues_send_req())
+			if (!rak_blues.send_req())
 			{
 				MYLOG("BLUES", "card.wifi request failed");
 			}
@@ -202,58 +180,34 @@ bool init_blues(void)
 	}
 
 	// {"req": "card.version"}
-	if (blues_start_req("card.version"))
+	if (rak_blues.start_req((char *)"card.version"))
 	{
-		if (!blues_send_req())
+		if (!rak_blues.send_req(blues_response, 4096))
 		{
 			MYLOG("BLUES", "card.version request failed");
 		}
+		AT_PRINTF("+EVT:%s",blues_response);
 	}
-	return true;
-}
-
-bool blues_start_req(String request_name)
-{
-	req = notecard.newRequest(request_name.c_str());
-	if (req != NULL)
-	{
-		return true;
-	}
-	return false;
-}
-
-bool blues_send_req(void)
-{
-	char *json = JPrintUnformatted(req);
-	MYLOG("BLUES", "Card request = %s", json);
-
-	J *rsp;
-	rsp = notecard.requestAndResponse(req);
-	if (rsp == NULL)
-	{
-		return false;
-	}
-	json = JPrintUnformatted(rsp);
-	snprintf(blues_response, 4095, "%s", json);
-	MYLOG("BLUES", "Card response = %s", blues_response);
-	notecard.deleteResponse(rsp);
-
 	return true;
 }
 
 void blues_hub_status(void)
 {
-	blues_start_req("hub.status");
-	if (!blues_send_req())
+	rak_blues.start_req((char *)"hub.status");
+	if (!rak_blues.send_req(blues_response,4096))
 	{
 		MYLOG("BLUES", "hub.status request failed");
 	}
+	AT_PRINTF("+EVT:%s", blues_response);
 }
 
 void blues_card_restore(void)
 {
-	blues_start_req("hub.status");
-	JAddBoolToObject(req, "delete", true);
-	JAddBoolToObject(req, "connected", true);
-	blues_send_req();
+	rak_blues.start_req((char *)"hub.status");
+	rak_blues.add_bool_entry((char *)"delete", true);
+	rak_blues.add_bool_entry((char *)"connected", true);
+	if (!rak_blues.send_req())
+	{
+		MYLOG("BLUES", "hub.status reset request failed");
+	}
 }

@@ -411,13 +411,13 @@ int at_blues_req(char *str)
 			str[i] = str[i] + 32;			// converting uppercase to lowercase
 	}
 
-	if (!blues_start_req(str))
+	if (!rak_blues.start_req(str))
 	{
 		snprintf(g_at_query_buf, ATQUERY_SIZE, "Request creation failed");
 		return AT_ERRNO_EXEC_FAIL;
 	}
 
-	if (!blues_send_req())
+	if (!rak_blues.send_req(blues_response, 4096))
 	{
 		snprintf(g_at_query_buf, ATQUERY_SIZE, "Send request failed");
 		return AT_ERRNO_EXEC_FAIL;

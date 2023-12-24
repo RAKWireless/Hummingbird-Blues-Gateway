@@ -42,180 +42,172 @@ uint32_t value_divider[NUM_DEFINED_SENSOR_TYPES] = {1, 1, 100, 100, 1, 1, 1, 10,
 
 bool blues_parse_send(uint8_t *data, uint16_t data_len)
 {
-	blues_start_req("note.add");
+	rak_blues.start_req((char *)"note.add");
 
-	JAddStringToObject(req, "file", "sensors.qo");
-	JAddBoolToObject(req, "sync", true);
-	J *body = JCreateObject();
-	if (body != NULL)
+	rak_blues.add_string_entry((char *)"file", (char *)"sensors.qo");
+	rak_blues.add_bool_entry((char *)"sync", true);
+
+	uint16_t byte_idx = 8;
+	uint8_t sens_num = 0;
+	float float_val1 = 0.0;
+	float float_val2 = 0.0;
+	float float_val3 = 0.0;
+	uint32_t unsigned_val1 = 0;
+	uint32_t unsigned_val2 = 0;
+	uint32_t unsigned_val3 = 0;
+	int32_t signed_val1 = 0;
+	String sens_full_name = "";
+	char node_id_str[17];
+	char rounding[40];
+
+	// Add DevEUI
+	snprintf(node_id_str, 17, "%02X%02X%02X%02X%02X%02X%02X%02X", data[0], data[1], data[2], data[3],
+			 data[4], data[5], data[6], data[7]);
+	// snprintf(node_id_str, 17, "%02X%02X%02X%02X%02X%02X%02X%02X", g_lorawan_settings.node_device_eui[0], g_lorawan_settings.node_device_eui[1],
+	// 		 g_lorawan_settings.node_device_eui[2], g_lorawan_settings.node_device_eui[3],
+	// 		 g_lorawan_settings.node_device_eui[4], g_lorawan_settings.node_device_eui[5],
+	// 		 g_lorawan_settings.node_device_eui[6], g_lorawan_settings.node_device_eui[7]);
+	rak_blues.add_nested_string_entry((char *)"body", (char *)"dev_eui", node_id_str);
+	while (byte_idx < data_len)
 	{
-		uint16_t byte_idx = 0;
-		uint8_t sens_num = 0;
-		float float_val1 = 0.0;
-		float float_val2 = 0.0;
-		float float_val3 = 0.0;
-		uint32_t unsigned_val1 = 0;
-		uint32_t unsigned_val2 = 0;
-		uint32_t unsigned_val3 = 0;
-		int32_t signed_val1 = 0;
-		String sens_full_name = "";
-		char node_id_str[9];
-		J *sec_lvl;
-		char rounding[40];
-
-		// JAddStringToObject(body, "node_id", sensor_id.c_str());
-
-		while (byte_idx < data_len)
+		uint16_t current_byte_idx = byte_idx;
+		uint16_t sens_idx = 256;
+		sens_num = data[current_byte_idx++];
+		MYLOG("PARSE", "Sensor Number %d", sens_num);
+		// find matching index
+		for (int idx = 0; idx < NUM_DEFINED_SENSOR_TYPES; idx++)
 		{
-			uint16_t current_byte_idx = byte_idx;
-			uint16_t sens_idx = 256;
-			sens_num = data[current_byte_idx++];
-			MYLOG("PARSE", "Sensor Number %d", sens_num);
-			// find matching index
-			for (int idx = 0; idx < NUM_DEFINED_SENSOR_TYPES; idx++)
+			if (value_id[idx] == data[current_byte_idx])
 			{
-				if (value_id[idx] == data[current_byte_idx])
-				{
-					sens_idx = idx;
-					break;
-				}
-			}
-			if (sens_idx == 256)
-			{
-				// Wrong sensor ID
-				MYLOG("PARSE", "Unknown Sensor %d", data[current_byte_idx]);
-				JAddStringToObject(body, "error", "Invalid LPP ID");
-				JAddItemToObject(req, "body", body);
-				if (!blues_send_req())
-				{
-					MYLOG("PARSE", "Failed to send error packet");
-				}
-				return false;
-			}
-			MYLOG("PARSE", "Found Sensor %d", data[current_byte_idx]);
-			current_byte_idx++;
-			switch (value_id[sens_idx])
-			{
-			case 113:
-			case 134:
-				MYLOG("PARSE", "Found accelerometer or gyrometer");
-				sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
-				sec_lvl = JAddObjectToObject(body, sens_full_name.c_str());
-
-				float_val1 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
-				current_byte_idx += 2;
-				JAddNumberToObject(sec_lvl, "X", float_val1);
-				float_val2 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
-				current_byte_idx += 2;
-				JAddNumberToObject(sec_lvl, "Y", float_val2);
-				float_val3 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
-				current_byte_idx += 2;
-				JAddNumberToObject(sec_lvl, "Z", float_val3);
-				MYLOG("PARSE", "x %.4f y %.4f z %.4f", float_val1, float_val2, float_val3);
-				break;
-			case 136:
-				MYLOG("PARSE", "Found GPS 4 digit");
-				sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
-				sec_lvl = JAddObjectToObject(body, sens_full_name.c_str());
-
-				float_val1 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 10000.0;
-				current_byte_idx += 3;
-				JAddNumberToObject(sec_lvl, "Lat", float_val1);
-				float_val2 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 10000.0;
-				current_byte_idx += 3;
-				JAddNumberToObject(sec_lvl, "Lng", float_val2);
-				float_val3 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 100.0;
-				current_byte_idx += 3;
-				JAddNumberToObject(sec_lvl, "Alt", float_val3);
-				MYLOG("PARSE", "lat %.4f lng %.4f alt %.4f", float_val1, float_val2, float_val3);
-				break;
-			case 137:
-				MYLOG("PARSE", "Found GPS 6 digit");
-				sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
-				sec_lvl = JAddObjectToObject(body, sens_full_name.c_str());
-
-				float_val1 = (float)((int16_t)data[current_byte_idx + 3] << 16 | (int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 1000000.0;
-				current_byte_idx += 4;
-				JAddNumberToObject(sec_lvl, "Lat", float_val1);
-				float_val2 = (float)((int16_t)data[current_byte_idx + 3] << 16 | (int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 1000000.0;
-				current_byte_idx += 4;
-				JAddNumberToObject(sec_lvl, "Lng", float_val2);
-				float_val3 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 100.0;
-				current_byte_idx += 3;
-				JAddNumberToObject(sec_lvl, "Alt", float_val3);
-				MYLOG("PARSE", "lat %.4f lng %.4f alt %.4f", float_val1, float_val2, float_val3);
-				break;
-			case 135:
-				MYLOG("PARSE", "Found Color");
-				sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
-				sec_lvl = JAddObjectToObject(body, sens_full_name.c_str());
-
-				unsigned_val1 = (int16_t)data[current_byte_idx];
-				current_byte_idx += 4;
-				JAddNumberToObject(sec_lvl, "Red", unsigned_val1);
-				unsigned_val2 = (int16_t)data[current_byte_idx];
-				current_byte_idx += 4;
-				JAddNumberToObject(sec_lvl, "Green", unsigned_val1);
-				unsigned_val3 = (int16_t)data[current_byte_idx];
-				current_byte_idx += 3;
-				JAddNumberToObject(sec_lvl, "Blue", unsigned_val1);
-				MYLOG("PARSE", "r %ld g %ld b %ld", unsigned_val1, unsigned_val2, unsigned_val3);
-				break;
-			case 255:
-				unsigned_val1 = 0;
-				for (int cnt = 0; cnt < value_size[sens_idx]; cnt++)
-				{
-					unsigned_val1 = (unsigned_val1 << 8) | data[current_byte_idx];
-					current_byte_idx++;
-				}
-				sprintf(node_id_str,"%08LX",(uint64_t)unsigned_val1);
-				MYLOG("PARSE", "unsigned_val1 %s", node_id_str);
-
-				sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
-				JAddStringToObject(body, value_name[sens_idx].c_str(), node_id_str);
-
-				MYLOG("PARSE", "Added %s %08LX", sens_full_name.c_str(), (uint64_t)unsigned_val1);
-
-				break;
-			default:
-				signed_val1 = 0;
-				for (int cnt = 0; cnt < value_size[sens_idx]; cnt++)
-				{
-					signed_val1 = (signed_val1 << 8) | data[current_byte_idx];
-					current_byte_idx++;
-				}
-				float_val1 = (float)signed_val1 / value_divider[sens_idx];
-
-				// Limit to 2 decimals
-				sprintf(rounding, "%.2f", float_val1);
-				sscanf(rounding, "%f", &float_val1);
-
-				sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
-				JAddNumberToObject(body, sens_full_name.c_str(), float_val1);
-				MYLOG("PARSE", "Added %s %.2f", sens_full_name.c_str(), float_val1);
-
+				sens_idx = idx;
 				break;
 			}
-			byte_idx = byte_idx + value_size[sens_idx] + 2;
-			// MYLOG("PARSE", "Data size %d Position %d", data_len, byte_idx);
-			MYLOG("PARSE", ">>>>><<<<<");
 		}
-		JAddItemToObject(req, "body", body);
-
-		JAddBinaryToObject(req, "payload", data, data_len);
-
-		MYLOG("PARSE", "Finished parsing");
-		if (!blues_send_req())
+		if (sens_idx == 256)
 		{
-			MYLOG("PARSE", "Send request failed");
+			// Wrong sensor ID
+			MYLOG("PARSE", "Unknown Sensor %d", data[current_byte_idx]);
+			rak_blues.add_nested_string_entry((char *)"body", (char *)"error", (char*)"Invalid LPP ID");
+			if (!rak_blues.send_req())
+			{
+				MYLOG("PARSE", "Failed to send error packet");
+			}
 			return false;
 		}
-		return true;
-	}
-	else
-	{
-		MYLOG("PARSE", "Error creating body");
+		MYLOG("PARSE", "Found Sensor %d", data[current_byte_idx]);
+		current_byte_idx++;
+
+		switch (value_id[sens_idx])
+		{
+		case 113:
+		case 134:
+			MYLOG("PARSE", "Found accelerometer or gyrometer");
+			sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
+
+			float_val1 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
+			current_byte_idx += 2;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"X", float_val1);
+			current_byte_idx += 2;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Y", float_val1);
+			float_val3 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
+			current_byte_idx += 2;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Z", float_val1);
+			MYLOG("PARSE", "x %.4f y %.4f z %.4f", float_val1, float_val2, float_val3);
+			break;
+		case 136:
+			MYLOG("PARSE", "Found GPS 4 digit");
+			sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
+
+			float_val1 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 10000.0;
+			current_byte_idx += 3;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lat", float_val1);
+			float_val2 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 10000.0;
+			current_byte_idx += 3;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lng", float_val1);
+			float_val3 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 100.0;
+			current_byte_idx += 3;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Alt", float_val1);
+			MYLOG("PARSE", "lat %.4f lng %.4f alt %.4f", float_val1, float_val2, float_val3);
+			break;
+		case 137:
+			MYLOG("PARSE", "Found GPS 6 digit");
+			sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
+
+			float_val1 = (float)((int16_t)data[current_byte_idx + 3] << 16 | (int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 1000000.0;
+			current_byte_idx += 4;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lat", float_val1);
+			float_val2 = (float)((int16_t)data[current_byte_idx + 3] << 16 | (int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 1000000.0;
+			current_byte_idx += 4;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lng", float_val1);
+			float_val3 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 100.0;
+			current_byte_idx += 3;
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"alt", float_val1);
+			MYLOG("PARSE", "lat %.4f lng %.4f alt %.4f", float_val1, float_val2, float_val3);
+			break;
+		case 135:
+			MYLOG("PARSE", "Found Color");
+			sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
+
+			unsigned_val1 = (int16_t)data[current_byte_idx];
+			current_byte_idx += 4;
+			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Red", float_val1);
+			unsigned_val2 = (int16_t)data[current_byte_idx];
+			current_byte_idx += 4;
+			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Green", float_val1);
+			unsigned_val3 = (int16_t)data[current_byte_idx];
+			current_byte_idx += 3;
+			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Blue", float_val1);
+			MYLOG("PARSE", "r %ld g %ld b %ld", unsigned_val1, unsigned_val2, unsigned_val3);
+			break;
+		case 255:
+			unsigned_val1 = 0;
+			for (int cnt = 0; cnt < value_size[sens_idx]; cnt++)
+			{
+				unsigned_val1 = (unsigned_val1 << 8) | data[current_byte_idx];
+				current_byte_idx++;
+			}
+			sprintf(node_id_str, "%08LX", (uint64_t)unsigned_val1);
+			MYLOG("PARSE", "unsigned_val1 %s", node_id_str);
+
+			sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
+			rak_blues.add_2lv_nested_string_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)value_name[sens_idx].c_str(), node_id_str);
+
+			MYLOG("PARSE", "Added %s %08LX", sens_full_name.c_str(), (uint64_t)unsigned_val1);
+
+			break;
+		default:
+			signed_val1 = 0;
+			for (int cnt = 0; cnt < value_size[sens_idx]; cnt++)
+			{
+				signed_val1 = (signed_val1 << 8) | data[current_byte_idx];
+				current_byte_idx++;
+			}
+			float_val1 = (float)signed_val1 / value_divider[sens_idx];
+
+			// Limit to 2 decimals
+			sprintf(rounding, "%.2f", float_val1);
+			sscanf(rounding, "%f", &float_val1);
+
+			sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
+			rak_blues.add_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), float_val1);
+			MYLOG("PARSE", "Added %s %.2f", sens_full_name.c_str(), float_val1);
+
+			break;
+		}
+		byte_idx = byte_idx + value_size[sens_idx] + 2;
+		// MYLOG("PARSE", "Data size %d Position %d", data_len, byte_idx);
+		MYLOG("PARSE", ">>>>><<<<<");
 	}
 
-	return false;
+	char payload_b86[255];
+	rak_blues.myJB64Encode(payload_b86, (const char *)data, data_len);
+	rak_blues.add_string_entry((char *)"payload", payload_b86);
+
+	MYLOG("PARSE", "Finished parsing");
+	if (!rak_blues.send_req())
+	{
+		MYLOG("PARSE", "Send request failed");
+		return false;
+	}
+	return true;
 }
