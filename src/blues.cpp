@@ -46,11 +46,11 @@ bool init_blues(void)
 			rak_blues.add_string_entry((char *)"product", g_blues_settings.product_uid);
 			if (g_blues_settings.conn_continous)
 			{
-				rak_blues.add_string_entry((char *)"mode", "continuous");
+				rak_blues.add_string_entry((char *)"mode", (char *)"continuous");
 			}
 			else
 			{
-				rak_blues.add_string_entry((char *)"mode", "minimum");
+				rak_blues.add_string_entry((char *)"mode", (char *)"minimum");
 			}
 			// Set sync time to 20 times the sensor read time
 			rak_blues.add_int32_entry((char *)"seconds", (g_lorawan_settings.send_repeat_time * 20 / 1000));
@@ -77,7 +77,7 @@ bool init_blues(void)
 			// rak_blues.add_string_entry((char *)"mode", "continous");
 
 			// Periodic GNSS mode
-			rak_blues.add_string_entry((char *)"mode", "periodic");
+			rak_blues.add_string_entry((char *)"mode", (char *)"periodic");
 
 			// Set location acquisition time to the sensor read time
 			rak_blues.add_int32_entry((char *)"seconds", (g_lorawan_settings.send_repeat_time / 2000));
@@ -99,7 +99,7 @@ bool init_blues(void)
 		if (rak_blues.start_req((char *)"card.location.mode"))
 		{
 			// GNSS mode off
-			rak_blues.add_string_entry((char *)"mode", "off");
+			rak_blues.add_string_entry((char *)"mode", (char *)"off");
 			if (!rak_blues.send_req())
 			{
 				MYLOG("BLUES", "card.location.mode request failed");
@@ -117,7 +117,7 @@ bool init_blues(void)
 		// {“req”:”card.wireless”}
 		if (rak_blues.start_req((char *)"card.wireless"))
 		{
-			rak_blues.add_string_entry((char *)"mode", "auto");
+			rak_blues.add_string_entry((char *)"mode", (char *)"auto");
 
 			switch (g_blues_settings.sim_usage)
 			{
@@ -160,10 +160,10 @@ bool init_blues(void)
 		MYLOG("BLUES", "Set WiFi");
 		if (rak_blues.start_req((char *)"card.wifi"))
 		{
-			rak_blues.add_string_entry((char *)"ssid", "-");
-			rak_blues.add_string_entry((char *)"password", "-");
-			rak_blues.add_string_entry((char *)"name", "RAK-");
-			rak_blues.add_string_entry((char *)"org", "RAK-PH");
+			rak_blues.add_string_entry((char *)"ssid", (char *)"-");
+			rak_blues.add_string_entry((char *)"password", (char *)"-");
+			rak_blues.add_string_entry((char *)"name", (char *)"RAK-");
+			rak_blues.add_string_entry((char *)"org", (char *)"RAK-PH");
 			rak_blues.add_bool_entry((char *)"start", false);
 
 			if (!rak_blues.send_req())
