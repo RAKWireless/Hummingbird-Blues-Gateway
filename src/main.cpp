@@ -75,6 +75,24 @@ bool init_app(void)
 	// Initialize User AT commands
 	init_user_at();
 
+	has_rak1921 = init_rak1921();
+
+	float batt = read_batt();
+	for (int rd_lp = 0; rd_lp < 10; rd_lp++)
+	{
+		batt += read_batt();
+		batt = batt / 2;
+	}
+	if (has_rak1921)
+	{
+		sprintf(line_str, "HummingBird B %.2fV", batt/1000);
+		rak1921_write_header(line_str);
+	}
+	else
+	{
+		MYLOG("APP", "No OLED found");
+	}
+
 	// Check if RAK1906 is available
 	has_rak1906 = init_rak1906();
 	if (has_rak1906)
@@ -144,14 +162,26 @@ void app_event_handler(void)
 					{
 					case LMH_SUCCESS:
 						MYLOG("APP", "Packet enqueued");
+						if (has_rak1921)
+						{
+							rak1921_add_line((char *)"LoRaWAN sent");
+						}
 						break;
 					case LMH_BUSY:
 						MYLOG("APP", "LoRa transceiver is busy");
 						AT_PRINTF("+EVT:BUSY\n");
+						if (has_rak1921)
+						{
+							rak1921_add_line((char *)"LoRaWAN TX busy");
+						}
 						break;
 					case LMH_ERROR:
 						AT_PRINTF("+EVT:SIZE_ERROR\n");
 						MYLOG("APP", "Packet error, too big to send with current DR");
+						if (has_rak1921)
+						{
+							rak1921_add_line((char *)"LoRaWAN Size error");
+						}
 						break;
 					}
 				}
@@ -164,11 +194,19 @@ void app_event_handler(void)
 					if (send_p2p_packet(g_solution_data.getBuffer(), g_solution_data.getSize()))
 					{
 						MYLOG("APP", "Packet enqueued");
+						if (has_rak1921)
+						{
+							rak1921_add_line((char *)"LoRa P2P sent");
+						}
 					}
 					else
 					{
 						AT_PRINTF("+EVT:SIZE_ERROR\n");
 						MYLOG("APP", "Packet too big");
+						if (has_rak1921)
+						{
+							rak1921_add_line((char *)"LoRa P2P Size error");
+						}
 					}
 				}
 			}

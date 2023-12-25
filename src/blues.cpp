@@ -186,7 +186,16 @@ bool init_blues(void)
 		{
 			MYLOG("BLUES", "card.version request failed");
 		}
-		AT_PRINTF("+EVT:%s",blues_response);
+		char version[64];
+		char dev_id[64];
+		char sku[64];
+		rak_blues.get_string_entry((char *)"version", version, 64);
+		rak_blues.get_string_entry((char *)"sku", sku, 64);
+		rak_blues.get_string_entry((char *)"device", dev_id, 64);
+
+		AT_PRINTF("+EVT:V=%s", version);
+		AT_PRINTF("+EVT:T=%s", sku);
+		AT_PRINTF("+EVT:ID=%s", dev_id);
 	}
 	return true;
 }
@@ -194,7 +203,7 @@ bool init_blues(void)
 void blues_hub_status(void)
 {
 	rak_blues.start_req((char *)"hub.status");
-	if (!rak_blues.send_req(blues_response,4096))
+	if (!rak_blues.send_req(blues_response, 4096))
 	{
 		MYLOG("BLUES", "hub.status request failed");
 	}

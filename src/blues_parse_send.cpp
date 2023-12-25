@@ -10,6 +10,9 @@
  */
 #include "main.h"
 
+/** Buffer for OLED output */
+char line_str[256];
+
 /** Number of defined sensor types */
 #define NUM_DEFINED_SENSOR_TYPES 38
 
@@ -68,6 +71,22 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 	// 		 g_lorawan_settings.node_device_eui[4], g_lorawan_settings.node_device_eui[5],
 	// 		 g_lorawan_settings.node_device_eui[6], g_lorawan_settings.node_device_eui[7]);
 	rak_blues.add_nested_string_entry((char *)"body", (char *)"dev_eui", node_id_str);
+
+	if (has_rak1921)
+	{
+		float batt = read_batt();
+		for (int rd_lp = 0; rd_lp < 10; rd_lp++)
+		{
+			batt += read_batt();
+			batt = batt / 2;
+		}
+		sprintf(line_str, "HummingBird B %.2fV", batt / 1000);
+		rak1921_write_header(line_str);
+
+		snprintf(line_str, 256, ">> %s", node_id_str);
+		rak1921_add_line(line_str);
+	}
+
 	while (byte_idx < data_len)
 	{
 		uint16_t current_byte_idx = byte_idx;
@@ -107,6 +126,7 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 			float_val1 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
 			current_byte_idx += 2;
 			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"X", float_val1);
+			float_val2 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
 			current_byte_idx += 2;
 			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Y", float_val1);
 			float_val3 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
@@ -170,7 +190,7 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 			MYLOG("PARSE", "unsigned_val1 %s", node_id_str);
 
 			sens_full_name = value_name[sens_idx] + "_" + String(sens_num);
-			rak_blues.add_2lv_nested_string_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)value_name[sens_idx].c_str(), node_id_str);
+			rak_blues.add_nested_string_entry((char *)"body", (char *)"node_id", node_id_str);
 
 			MYLOG("PARSE", "Added %s %08LX", sens_full_name.c_str(), (uint64_t)unsigned_val1);
 
