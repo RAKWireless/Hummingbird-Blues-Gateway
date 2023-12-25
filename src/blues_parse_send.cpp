@@ -64,13 +64,14 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 	char rounding[40];
 
 	// Add DevEUI
+	snprintf(node_id_str, 17, "%02X%02X%02X%02X%02X%02X%02X%02X", g_lorawan_settings.node_device_eui[0], g_lorawan_settings.node_device_eui[1],
+			 g_lorawan_settings.node_device_eui[2], g_lorawan_settings.node_device_eui[3],
+			 g_lorawan_settings.node_device_eui[4], g_lorawan_settings.node_device_eui[5],
+			 g_lorawan_settings.node_device_eui[6], g_lorawan_settings.node_device_eui[7]);
+	rak_blues.add_nested_string_entry((char *)"body", (char *)"dev_eui", node_id_str);
 	snprintf(node_id_str, 17, "%02X%02X%02X%02X%02X%02X%02X%02X", data[0], data[1], data[2], data[3],
 			 data[4], data[5], data[6], data[7]);
-	// snprintf(node_id_str, 17, "%02X%02X%02X%02X%02X%02X%02X%02X", g_lorawan_settings.node_device_eui[0], g_lorawan_settings.node_device_eui[1],
-	// 		 g_lorawan_settings.node_device_eui[2], g_lorawan_settings.node_device_eui[3],
-	// 		 g_lorawan_settings.node_device_eui[4], g_lorawan_settings.node_device_eui[5],
-	// 		 g_lorawan_settings.node_device_eui[6], g_lorawan_settings.node_device_eui[7]);
-	rak_blues.add_nested_string_entry((char *)"body", (char *)"dev_eui", node_id_str);
+	rak_blues.add_nested_string_entry((char *)"body", (char *)"node_eui", node_id_str);
 
 	if (has_rak1921)
 	{
