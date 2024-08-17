@@ -129,10 +129,10 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"X", float_val1);
 			float_val2 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
 			current_byte_idx += 2;
-			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Y", float_val1);
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Y", float_val2);
 			float_val3 = (float)((int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / value_divider[sens_idx];
 			current_byte_idx += 2;
-			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Z", float_val1);
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Z", float_val3);
 			MYLOG("PARSE", "x %.4f y %.4f z %.4f", float_val1, float_val2, float_val3);
 			break;
 		case 136:
@@ -144,10 +144,10 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lat", float_val1);
 			float_val2 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 10000.0;
 			current_byte_idx += 3;
-			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lng", float_val1);
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lng", float_val2);
 			float_val3 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 100.0;
 			current_byte_idx += 3;
-			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Alt", float_val1);
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Alt", float_val3);
 			MYLOG("PARSE", "lat %.4f lng %.4f alt %.4f", float_val1, float_val2, float_val3);
 			break;
 		case 137:
@@ -159,10 +159,10 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lat", float_val1);
 			float_val2 = (float)((int16_t)data[current_byte_idx + 3] << 16 | (int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 1000000.0;
 			current_byte_idx += 4;
-			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lng", float_val1);
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Lng", float_val2);
 			float_val3 = (float)((int16_t)data[current_byte_idx + 2] << 16 | (int16_t)data[current_byte_idx + 1] << 8 | (int16_t)data[current_byte_idx]) / 100.0;
 			current_byte_idx += 3;
-			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"alt", float_val1);
+			rak_blues.add_2lv_nested_float_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"alt", float_val3);
 			MYLOG("PARSE", "lat %.4f lng %.4f alt %.4f", float_val1, float_val2, float_val3);
 			break;
 		case 135:
@@ -171,13 +171,13 @@ bool blues_parse_send(uint8_t *data, uint16_t data_len)
 
 			unsigned_val1 = (int16_t)data[current_byte_idx];
 			current_byte_idx += 4;
-			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Red", float_val1);
+			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Red", unsigned_val1);
 			unsigned_val2 = (int16_t)data[current_byte_idx];
 			current_byte_idx += 4;
-			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Green", float_val1);
+			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Green", unsigned_val2);
 			unsigned_val3 = (int16_t)data[current_byte_idx];
 			current_byte_idx += 3;
-			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Blue", float_val1);
+			rak_blues.add_2lv_nested_int32_entry((char *)"body", (char *)sens_full_name.c_str(), (char *)"Blue", unsigned_val3);
 			MYLOG("PARSE", "r %ld g %ld b %ld", unsigned_val1, unsigned_val2, unsigned_val3);
 			break;
 		case 255:
